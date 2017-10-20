@@ -1,0 +1,190 @@
+module generator (
+    input clk,  // clock
+    input rst,  // reset
+    output a[8],
+    output b[8],
+    output alufn[8],
+    output testcase[5]
+  ) {
+
+  // FLip flop to iterate through different test cases
+  dff counter[30](.clk(clk), .rst(rst));
+
+  always {
+    
+    // Select a test case based on dff
+    case (counter.q[25+:5]) {
+      //Test case1: addition in add no error
+      5b00001:  
+        testcase = d1;
+        a = 3d7;
+        b = 3d5;
+        alufn = 8b00000000;
+
+      //Test case2: addition in add with error        
+      5b000010:
+        testcase = d2;
+        a = 8d128;
+        b = 8d128;
+        alufn = 8b00000000;
+      
+      //Test case3: subtraction in add no error     
+      5b00011:
+        testcase = d3;
+        a = 3d7;
+        b = 3d5; 
+        alufn = 8b00000001;
+
+      //Test case4: subtraction in add with error                 
+      5b00100:
+        testcase = d4;
+        a = 3d5;
+        b = 3d7; 
+        alufn = 8b00000001;
+
+      //Test case5: multiplication in add no error         
+      5b00101:
+        testcase = d5;
+        a = 3d7;
+        b = 3d5; 
+        alufn = 8b00000010;
+
+      //Test case6: multiplication in add with error                 
+      5b00110:
+        testcase = d6;
+        a = 5d30;
+        b = 5d31; 
+        alufn = 8b00000010;
+ 
+      //Test case7: equal in cmp return 1         
+      5b00111:
+        testcase = d7;
+        a = 3d5;
+        b = 3d5; 
+        alufn = 8b00110011;
+
+      //Test case8: equal in cmp with return 0        
+      5b01000:
+        testcase = d8;
+        a = 3d7;
+        b = 3d5; 
+        alufn = 8b00110011;
+
+      //Test case9: less than in cmp return 1       
+      5b01001:
+        testcase = d9;
+        a = 3d5;
+        b = 3d7; 
+        alufn = 8b00110101;
+
+      //Test case10: less than in cmp return 0        
+      5b01010:
+        testcase = d10;
+        a = 3d7;
+        b = 3d5; 
+        alufn = 8b00110101;
+        
+      //Test case11: less than or equal in cmp return 1
+      5b01011:
+        testcase = d11;
+        a = 3d5;
+        b = 3d7; 
+        alufn = 8b00110111;
+        
+      //Test case12: less than or equal in cmp return 0
+      5b01100:
+        testcase = d12;
+        a = 3d7;
+        b = 3d5; 
+        alufn = 8b00110111;
+        
+      //Test case13:and in boole no error
+      5b01101:
+        testcase = d13;
+        a = 3d5;
+        b = 3d7; 
+        alufn = 8b00011000;
+        
+      //Test case14:or in boole no error
+      5b01110:
+        testcase = d14;
+        a = 3d5;
+        b = 3d7; 
+        alufn = 8b00011110;
+      
+      //Test case15:xor in boole no error
+      5b01111:
+        testcase = d15;
+        a = 3d5;
+        b = 3d7; 
+        alufn = 8b00010110; 
+              
+      //Test case16:A in boole no error 
+      5b10000:
+        testcase = d16;
+        a = 3d5;
+        b = 3d7; 
+        alufn = 8b00011010; 
+        
+      //Test case17:Shift left in shift no error 
+      5b10001:
+        testcase = d17;
+        a = 3d7;
+        b = 3d5; 
+        alufn = 8b00100000;
+       
+      //Test case18:Shift right in shift no error 
+      5b10010:
+        testcase = d18;
+        a = 8d176;
+        b =  3d5;
+        alufn = 8b00100001;
+        
+      //Test case19:SRA in shift no error 
+      5b10011:
+        testcase = d19;
+        a = 8d176;
+        b = 3d5; 
+        alufn = 8b00100011;
+        //11010?01
+        
+      //Test case20:xnor in boole no error  
+      5b10100:
+        testcase = d20;
+        a = 3d5;
+        b = 3d7;
+        alufn = 8b00011001;
+        
+      //Test case21:nor in boole no error  
+      5b10101:
+        testcase = d21;
+        a = 3d5;
+        b = 3d7;
+        alufn = 8b00011101;
+        
+      //Test case22:nand in boole no error
+       5b10110:
+        testcase = d22;
+        a = 3d5;
+        b = 3d7;
+        alufn = 8b00010011;
+               
+      default:
+        testcase = d0;
+        a=0;
+        b=0;
+        alufn=0;
+
+    }
+    
+    // 5b10110 refers to the last test case
+    if (counter.q[29-:5]<=5b10110 + 3){
+      // Increments counter by one
+      counter.d = counter.q + 1;
+    } else {
+      // Reset counter
+      counter.d = 1;
+    }
+    
+  }
+}

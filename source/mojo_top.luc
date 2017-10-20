@@ -1,0 +1,104 @@
+module mojo_top (
+    input clk,              // 50MHz clock
+    input rst_n,            // reset button (active low)
+    output led [8],         // 8 user controllable LEDs
+    input cclk,             // configuration clock, AVR ready when high  
+    input spi_ss,           // AVR SPI Slave Select
+    input spi_mosi,         // AVR SPI MOSI
+    input spi_sck,          // AVR SPI Clock
+    input avr_tx,           // AVR TX (FPGA RX)
+    input avr_rx_busy,      // AVR RX buffer full
+    output io_led [3][8],   // LEDs on IO Shield
+    input io_button [5],    // 5 buttons on IO Shield
+    input io_dip [3][8],     // DIP switches on IO Shield
+    output io_seg[8],         // output to io segment
+    output io_sel[4]          // output to select io segment
+  ) {
+  
+  sig rst;                  // reset signal
+  
+  .clk(clk) {
+    // The reset conditioner is used to synchronize the reset signal to the FPGA
+    // clock. This ensures the entire FPGA comes out of reset at the same time.
+    reset_conditioner reset_cond;
+    .rst(rst){
+      auto_test auto_test;
+      generator generator;
+    }
+  }
+  // Segment counter to cycle through the different segments
+  dff seg_counter[20](.clk(clk), .rst(rst));
+  alu alu;
+
+
+  always {
+    reset_cond.in = ~rst_n;   // input raw inverted reset signal
+    rst = reset_cond.out;     // conditioned reset
+    
+    
+    // Toggle Manual or Auto-Testing mode
+    if (io_dip[0][6]==1){
+      alu.a=io_dip[2];
+      alu.b=io_dip[1];
+      alu.alufn=io_dip[0];
+      // connect the DIP switches to the LEDs
+      io_led[1] = io_dip[1];
+      io_led[2] = io_dip[2];
+      // Toggle Display of LED on IO Shield
+      if (io_dip[0][7]==0){
+        io_led[0] = io_dip[0];
+        led = alu.out;
+      } else {
+        io_led[0] = alu.out;
+        led[0+:6] = io_dip[0][0+:6];
+        led[7] = 0;                   // Zeros the switch used for toggling
+        led[6] = 0;                   // Zeros the switch used for auto-testing
+      }
+    } else {
+      // Gets generated input a/b/alufn from generator module, and pass to alu module
+      alu.a=generator.a;
+      alu.b=generator.b;
+      alu.alufn=generator.alufn;   
+      // Connect the generated a,b,alufn,alu_output to the LEDs
+      io_led[2] = generator.a;
+      io_led[1] = generator.b;
+      io_led[0] = generator.alufn;
+      led = alu.out;
+    }
+    
+    
+    
+    // Puting output values into auto test to check if it is an error.
+    auto_test.alu_output = alu.out; 
+    auto_test.testcase = generator.testcase;
+    // Indicate wrong output on seven segment
+    if (io_dip[0][6]==0 && auto_test.wrong_output==1) {
+      if(seg_counter.q<20b01000000000000000000){
+          // 3rd segment, 'E'
+          io_sel = ~4b0100;
+          io_seg = ~8b01111001;        
+      }
+      else if (seg_counter.q<20b10000000000000000000){
+          // 2nd segment, 'R'
+          io_sel = ~4b0010;
+          io_seg = ~8b00110001;        
+
+      }
+      else if (seg_counter.q<20b11000000000000000000){
+          // 1st segment, 'R'
+          io_sel = ~4b0001;
+          io_seg = ~8b00110001;        
+
+      } else {
+          // 4th segment, blank
+          io_sel = ~4b1000;
+          io_seg = ~8b00000000;      
+      }
+    }  else {
+      // Turn off io segment if not auto-testing or no error
+      io_sel = 0;
+      io_seg = ~8b0;
+    }
+    seg_counter.d = seg_counter.q+1;
+  }
+}
